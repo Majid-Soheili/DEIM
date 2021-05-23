@@ -23,8 +23,7 @@ class test_Sampling extends BaseTest{
     data += Array(4, 4, 0, 0)
     data += Array(6, 3, 1, 0)
 
-    val smote = new SMOTE(data.toArray, 2, 100)
-    val smoted = smote.getSmoteData.takeRight(5)
+   val smoted=  new BalFactory(data.toArray, 2, 100).getSmote.takeRight(5)
 
     println(smoted.map(a => a.mkString("\t")).mkString("\n"))
 
@@ -51,15 +50,14 @@ class test_Sampling extends BaseTest{
     data += Array(4, 4, 0, 0)
     data += Array(6, 3, 1, 0)
 
-    val nMiss = new NearMiss(data.toArray, 2, 100)
-    val results = nMiss.getNearMiss(2)
+    val results = new BalFactory(data.toArray, 2, 100).getNearMiss(2)
 
     val pos = results.count(a => a.last == 0)
     val neg = results.count(a => a.last == 1)
 
     println(s"Positive instances: $pos")
     println(s"Negative instances: $neg")
-    println(results.map( a => a.mkString("\t")).mkString("\n"))
+    println(results.map(a => a.mkString("\t")).mkString("\n"))
 
     assert(pos === neg)
 
