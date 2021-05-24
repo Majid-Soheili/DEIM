@@ -12,31 +12,35 @@ import scala.util.Random
  * @param seed. the seed for generating random numbers
  */
 
-class BalFactory(data: => Array[Array[Double]], NeiNumber:Int = 5, percentage:Int = 500, threshold:Int = 1, seed:Int=12345) extends Serializable {
+class BalFactory(override val data: Array[Array[Double]], NeiNumber:Int = 5, percentage:Int = 500, override val threshold:Int = 1, override val seed:Int=12345) extends NeiManager {
 
   private val r = new Random(seed)
   private val grouped = data.map(_.last).groupBy(identity)
   private val mcValue = grouped.mapValues(_.length).minBy(_._2)._1
   private val minIndex = data.zipWithIndex.filter(_._1.last == mcValue).map(_._2)
   private val othIndex = data.zipWithIndex.filterNot(_._1.last == mcValue).map(_._2)
-  private val knn = new NeiManager(data, threshold)
   private val N = percentage / 100
+
+  def getBalanced(method:String):Array[Array[Double]] = {
+    if (method.toLowerCase() == "smote") this.getSmote
+    else if (method.toLowerCase() == "nearmiss1") this.getNearMiss(1)
+    else if (method.toLowerCase() == "nearmiss2") this.getNearMiss(2)
+    else if (method.toLowerCase() == "baggingundersampling") this.getRandomUnderSampling
+    else Array.empty[Array[Double]]
+  }
 
   def getNearMiss(version:Int):Array[Array[Double]] = {
 
+    if (version != 1 && version != 2)
+      new throws[Exception]("Invalid version of NearMiss method.")
+
     val ns = N * minIndex.length
-    val selected = if (version == 1) {
-      val distances = knn.getNearestDistanceMatrix(othIndex, minIndex, NeiNumber)
-      val dists = distances.map(a => a.sum)
-      (dists zip othIndex).sortBy(_._1).take(ns).map(_._2)
-    }
-    else if (version == 2) {
-      val distances = knn.getFurthestDistanceMatrix(othIndex, minIndex, NeiNumber)
-      val dists = distances.map(a => a.sum)
-      (dists zip othIndex).sortBy(_._1).take(ns).map(_._2)
-    }
-    else
-      Array.emptyIntArray
+    val distances =
+      if (version == 1) super.getNearestDistanceMatrix(othIndex, minIndex, NeiNumber)
+      else super.getFurthestDistanceMatrix(othIndex, minIndex, NeiNumber)
+
+    val dists = distances.map(a => a.sum)
+    val selected = (dists zip othIndex).sortBy(_._1).take(ns).map(_._2)
 
     val indexes = (minIndex ++ selected).sorted
     indexes.map(data)
@@ -47,11 +51,11 @@ class BalFactory(data: => Array[Array[Double]], NeiNumber:Int = 5, percentage:In
     val T = minIndex.length
     val synthetic = minIndex.flatMap {
       i =>
-        val nnarray = knn.getKnnHit(i, NeiNumber)
+        val nnarray = super.getKnnHit(i, NeiNumber)
         val populate = Array.tabulate(N) { j =>
           val nn = r.nextInt(NeiNumber)
           val k = nnarray(nn)
-          knn.generateSynthetic(i, k)
+          super.generateSynthetic(i, k)
         }
         populate
     }
