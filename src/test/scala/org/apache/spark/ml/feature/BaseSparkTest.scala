@@ -10,7 +10,7 @@ class BaseSparkTest extends BaseTest {
       .builder()
       .appName(name = name)
       .config("spark.master", "local[5]")
-      .config("spark.executor.heartbeatInterval", "1000s")
+      .config("spark.executor.heartbeatInterval", "100")
       .config("spark.network.timeout", "1200s")
       .getOrCreate()
 
