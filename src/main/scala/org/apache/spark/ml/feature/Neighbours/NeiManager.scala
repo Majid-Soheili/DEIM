@@ -6,17 +6,20 @@ import scala.util.Random
 
 /**
  * Neighbours Manager: Find nearest or furthest neighbours
- * @param data: It is assumed that the data is scaled formerly. It is necessary for computing euclidean distance.
- * @param threshold: It is a threshold for detecting nominal features.
+ * //@param data: It is assumed that the data is scaled formerly. It is necessary for computing euclidean distance.
+ * //@param threshold: It is a threshold for detecting nominal features.
  */
-class NeiManager(data: => Array[Array[Double]], threshold:Int = 1) extends Serializable with Logging {
+trait NeiManager extends Serializable with Logging {
 
-  val r = new Random(12345)
+  def data: Array[Array[Double]]
+  def threshold:Int = 1
+  def seed:Int = 5341
+  private val r = new Random(seed)
   private final val cIndex = data.head.length - 1
   private final val nFeatures: Int = data.head.length - 1
   private final val nominalFeatures = this.getNominalFeatures
 
-  def getKnn(idx: Int, nn: Int): Array[Int] = {
+  final def getKnn(idx: Int, nn: Int): Array[Int] = {
 
     val neighbours = new NerNeiHeap(nn)
     for (j <- data.indices; if idx != j) {
@@ -29,16 +32,40 @@ class NeiManager(data: => Array[Array[Double]], threshold:Int = 1) extends Seria
     neighbours.neighbourIndexes
   }
 
-  def getKnnByClass(idx: Int, nn: Int, nc: Int): Array[Array[Int]] = {
+  final def getKnnHit(idx: Int, nn: Int): Array[Int] = {
+    val neighbours = new NerNeiHeap(nn)
+    for (j <- data.indices; if idx != j && data(idx).last == data(j).last) {
+      val dist = this.distanceInstances(data(idx), data(j))
+      neighbours += (j, dist)
+    }
+    if (neighbours.size < nn)
+      throw new Exception("There is not enough neighbours")
 
-    val neighbours = Array.fill[NerNeiHeap](nc)(new NerNeiHeap(nn))
+    neighbours.neighbourIndexes
+  }
+
+  def getKnnMiss(idx: Int, nn: Int): Array[Int] = {
+    val neighbours = new NerNeiHeap(nn)
+    for (j <- data.indices; if idx != j && data(idx).last != data(j).last) {
+      val dist = this.distanceInstances(data(idx), data(j))
+      neighbours += (j, dist)
+    }
+    if (neighbours.size < nn)
+      throw new Exception("There is not enough neighbours")
+
+    neighbours.neighbourIndexes
+  }
+
+  def getKnnByClass(idx: Int, neiNum: Int, clsNum: Int): Array[Array[Int]] = {
+
+    val neighbours = Array.fill[NerNeiHeap](clsNum)(new NerNeiHeap(neiNum))
     for (j <- data.indices; if idx != j) {
       val cClass = data(j)(cIndex).toInt
       val dist = this.distanceInstances(data(idx), data(j))
       neighbours(cClass) += (j, dist)
     }
 
-    for (k <- 0 until nc; if neighbours(k).size < nn)
+    for (k <- 0 until clsNum; if neighbours(k).size < neiNum)
       throw new Exception("There is not enough")
 
     neighbours.map(_.neighbourIndexes)
@@ -61,6 +88,8 @@ class NeiManager(data: => Array[Array[Double]], threshold:Int = 1) extends Seria
   def getNearestDistanceMatrix(first: Array[Int], second: Array[Int], nerNei: Int): Array[Array[Double]] = getDistanceMatrix(first, second, nerNei, "nearest")
 
   def getFurthestDistanceMatrix(first: Array[Int], second: Array[Int], furNei: Int): Array[Array[Double]] = getDistanceMatrix(first, second, furNei, "furthest")
+
+  def getDifferentFeatures(first:Int, second:Int): Array[Double] =  this.differentFeatures( this.data(first), this.data(second))
 
   private def getDistanceMatrix(first: Array[Int], second: Array[Int], NeiNumber: Int, kind: String): Array[Array[Double]] = {
 
