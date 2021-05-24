@@ -6,8 +6,8 @@ import scala.util.Random
 
 /**
  * Neighbours Manager: Find nearest or furthest neighbours
- * //@param data: It is assumed that the data is scaled formerly. It is necessary for computing euclidean distance.
- * //@param threshold: It is a threshold for detecting nominal features.
+ * data: It is assumed that the data is scaled formerly. It is necessary for computing euclidean distance.
+ * threshold: It is a threshold for detecting nominal features.
  */
 trait NeiManager extends Serializable with Logging {
 
