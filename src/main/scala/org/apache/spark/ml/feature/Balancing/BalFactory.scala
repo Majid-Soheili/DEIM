@@ -26,6 +26,7 @@ class BalFactory(override val data: Array[Array[Double]], NeiNumber:Int = 5, per
     else if (method.toLowerCase() == "nearmiss1") this.getNearMiss(1)
     else if (method.toLowerCase() == "nearmiss2") this.getNearMiss(2)
     else if (method.toLowerCase() == "baggingundersampling") this.getRandomUnderSampling
+    else if (method.toLowerCase() == "none") this.data
     else Array.empty[Array[Double]]
   }
 
