@@ -1,9 +1,10 @@
 package org.apache.spark.ml.feature
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-class BaseSparkTest extends BaseTest {
+class BaseSparkTest extends BaseTest with Logging {
 
   def createSession(name:String): SparkSession = {
     def spark: SparkSession = SparkSession
