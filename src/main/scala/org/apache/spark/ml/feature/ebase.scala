@@ -13,6 +13,8 @@ trait ebase extends base {
 
   val numPartitions:Param[Int] = new Param[Int](this, "numPartition", "the number of partitions for balancing label distribution", ParamValidators.gtEq(0))
 
+  setDefault(numPartitions, 1)
+
   def getNumPartitions: Int = $(numPartitions)
 
   def setNumPartitions(num: Int): this.type = set(numPartitions, num)
