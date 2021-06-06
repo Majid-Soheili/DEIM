@@ -17,30 +17,30 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row}
 import org.apache.spark.storage.StorageLevel
 
 @Experimental
-final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase with Scaling{
+final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase with Scaling {
 
   def this() = this(Identifiable.randomUID("DEIM"))
 
   //region ---- Parameters -------------------------------
 
   private val validRankingMethods = Array("QPFS", "SRFS", "TPFS", "ReliefF") // Fisher
-  private val validBalancingMethod = Array("SMOTE", "NearMiss1", "NearMiss2", "BaggingUnderSampling")
+  private val validBalancingMethod = Array("SMOTE", "NearMiss1", "NearMiss2", "BaggingUnderSampling", "none")
 
-  private val maxBin: Param[Byte] = new Param[Byte](this, "maxBin", "The maximum number of bins applied in information-theory based ranking methods", ParamValidators.inRange(1, 255))
-  private val useCatch: Param[Boolean] = new Param[Boolean](this, "useCatch", "Using the catch")
-  private val balNumNei: Param[Int] = new Param[Int](this, "neiNumber", "the number of neighbours which is used in SMOTE and NeaMiss balancing methods")
-  private val thrNominal: Param[Int] = new Param[Int](this, "thrNominal", "the number of unique values to detecting nominal features")
-  private val seed: Param[Int] = new Param[Int](this, "seed", "seed value for sampling", ParamValidators.gt(0))
-  private val bagNum: Param[Int] = new Param[Int](this, "bagNum", "the number of bagging used in BaggingUnderSampling methods")
+  val maxBin: Param[Int] = new Param[Int](this, "maxBin", "The maximum number of bins applied in information-theory based ranking methods", ParamValidators.inRange(1, 255))
+  val useCatch: Param[Boolean] = new Param[Boolean](this, "useCatch", "Using the catch")
+  val balNumNei: Param[Int] = new Param[Int](this, "neiNumber", "the number of neighbours which is used in SMOTE and NeaMiss balancing methods")
+  val thrNominal: Param[Int] = new Param[Int](this, "thrNominal", "the number of unique values to detecting nominal features")
+  val seed: Param[Int] = new Param[Int](this, "seed", "seed value for sampling", ParamValidators.gt(0))
+  val bagNum: Param[Int] = new Param[Int](this, "bagNum", "the number of bagging used in BaggingUnderSampling methods", ParamValidators.gt(0))
 
-  private val numSamples: Param[Int] = new Param[Int](this, "numSamples", "The number of samples applied in ReliefF method")
-  private val numNeighbours: Param[Int] = new Param[Int](this, "numNeighbours", "The number of neighbours applied in ReliefF method")
+  val numSamples: Param[Int] = new Param[Int](this, "numSamples", "The number of samples applied in ReliefF method")
+  val numNeighbours: Param[Int] = new Param[Int](this, "numNeighbours", "The number of neighbours applied in ReliefF method")
+
+  val rankingMethod: Param[String] = new Param[String](this, "rankingMethod", "The feature ranking methods array applied as a based rankers", ParamValidators.inArray[String](validRankingMethods))
+  val balancingMethod: Param[String] = new Param[String](this, "balancingMethod", doc = "The balancing method to fix unbalancing problem", ParamValidators.inArray[String](validBalancingMethod))
 
 
-  private val rankingMethod: Param[String] = new Param[String](this, "rankingMethod", "The feature ranking methods array applied as a based rankers", ParamValidators.inArray[String](validRankingMethods))
-  private val balancingMethod: Param[String] = new Param[String](this, "balancingMethod", doc = "The balancing method to fix unbalancing problem", ParamValidators.inArray[String](validBalancingMethod))
-
-  setDefault(maxBin, 10.toByte)
+  setDefault(maxBin, 10)
   setDefault(useCatch, value = false)
   setDefault(balNumNei, value = 5)
   setDefault(numSamples, value = 20)
@@ -71,15 +71,15 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
 
   def getUseCatch: Boolean = $(useCatch)
 
-  def setMaxBin(num: Byte): this.type = set(maxBin, num)
+  def setMaxBin(num: Int): this.type = set(maxBin, num)
 
   def setBaggingNum(num: Int): this.type = set(bagNum, num)
 
   def setBalancingNumNeighbours(value: Int): this.type = set(balNumNei, value)
 
-  def setNumSamples(num:Int):this.type  = set(numSamples, num)
+  def setNumSamples(num: Int): this.type = set(numSamples, num)
 
-  def setNumNeighbours(num:Int):this.type  = set(numNeighbours, num)
+  def setNumNeighbours(num: Int): this.type = set(numNeighbours, num)
 
   def setThresholdNominal(value: Int): this.type = set(thrNominal, value)
 
@@ -103,6 +103,7 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
       .select("summary.max", "summary.min")
       .first()
 
+    val numFeatures = maxVec.size
     val balancedData: DataFrame =
       if (this.getUseCatch)
         super.BalanceLabelDistribution(dataset.select(this.getLabelCol, this.getFeaturesCol)).persist(StorageLevel.MEMORY_AND_DISK)
@@ -120,19 +121,26 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
           val balFactory = new BalFactory(scaled, this.getBalancingNumNeighbours, 100, this.getThresholdNominal, this.getSeed)
 
           val bg = if (this.getBalancingMethod != validBalancingMethod.last) 1 else this.getBaggingNum
-          Array.tabulate(bg) {
-            _ =>
+          val weights = {
+            Array.tabulate(bg) {
+              _ =>
 
-              val balanced = balFactory.getBalanced(this.getBalancingMethod)
-              this.getRankingMethod.toUpperCase() match {
-                case "QPFS" | "SRFS" | "TPFS" =>
-                  val similarity = new LMI("QP", balanced, maxVec.toArray, minVec.toArray, this.getMaxBin).getSimilarity
-                  new GMIFS().apply(this.getRankingMethod)(similarity)
-                case "ReliefF" =>
-                  new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal,this.getSeed)
-              }
+                val maxV = Array.fill[Double](numFeatures)(1.0)
+                val minV = Array.fill[Double](numFeatures)(0.0)
+                val balanced = balFactory.getBalanced(this.getBalancingMethod)
+                this.getRankingMethod.toUpperCase() match {
+                  case "QPFS" =>
+                    val similarity = new LMI("QP", balanced, maxV , minV, this.getMaxBin).getSimilarity
+                    new GMIFS().apply(this.getRankingMethod)(similarity)
+                  case "SRFS" | "TPFS" =>
+                    val similarity = new LMI("SR", balanced, maxV , minV, this.getMaxBin).getSimilarity
+                    new GMIFS().apply(this.getRankingMethod)(similarity)
+                  case "RELIEFF" =>
+                    new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, this.getSeed).getWeights
+                }
+            }
           }
-          Iterator(Array.empty[Array[Double]])
+          Iterator(weights)
         }
     }(encoder).collect()
 
