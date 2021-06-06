@@ -54,7 +54,7 @@ trait Discretizing extends Logging {
   def discEW(data: Array[Array[Double]], maxVec: Array[Double], minVec: Array[Double], nb: Int): Array[Array[Byte]] = {
 
     val t1 = System.currentTimeMillis()
-    val numFeatures = data.head.length - 1
+    val numFeatures = minVec.length
     val numColumns = numFeatures + 1
     val binSize = Array.tabulate(numFeatures)(i => (maxVec(i) - minVec(i)) / nb.toDouble)
 
