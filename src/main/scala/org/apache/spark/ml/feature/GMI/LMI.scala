@@ -7,10 +7,10 @@ import scala.collection.mutable
 
 class LMI(method: String, data: => Array[Array[Double]], maxVec: Array[Double], minVec: Array[Double], b:Int) extends Serializable with Discretizing with Logging {
 
-  private val numFeatures = maxVec.length
-  private val numColumns = numFeatures + 1
-  private val Dsc = super.discEW(data, maxVec, minVec, b).toVector
-  private val Dst = TransformColumnar(Dsc)
+  private final val numFeatures = maxVec.length
+  private final val numColumns = numFeatures + 1
+  private final val Dsc = super.discEW(data, maxVec, minVec, b).toVector
+  private final val Dst = TransformColumnar(Dsc)
 
   def getSimilarity: Array[Array[Double]] = method.toUpperCase() match {
     case "QP" => MI(Dst, b, true)
