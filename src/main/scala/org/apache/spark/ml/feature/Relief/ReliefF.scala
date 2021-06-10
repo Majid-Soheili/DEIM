@@ -1,5 +1,5 @@
 package org.apache.spark.ml.feature.Relief
-import org.apache.spark.ml.feature.Neighbours.NeiManager
+import org.apache.spark.ml.feature.Neighbours.{NeiManager, NerNeiHeap}
 
 import scala.util.Random
 
@@ -11,7 +11,7 @@ import scala.util.Random
  * @param threshold, the threshold value to detecting nominal feature.
  * @param seed, the seed value for random number generator
  */
-class ReliefF(override val data: Array[Array[Double]], nSamples:Int = 0, nNeighbours:Int = 10, override val threshold:Int = 1, override val seed:Int = 5341) extends NeiManager{
+class ReliefF(data: Array[Array[Double]], nSamples:Int = 0, nNeighbours:Int = 10, val threshold:Int = 1, val seed:Int = 5341) extends NeiManager{
 
   private final val rand = new Random(seed)
   private final val cIndex = data.head.length - 1
@@ -21,6 +21,7 @@ class ReliefF(override val data: Array[Array[Double]], nSamples:Int = 0, nNeighb
   private final val priorClass = this.getPriorProbabilityClass
   private final val nClass = priorClass.length
   private final val samples = this.getSamples
+  private final val nominalFeatures = super.getNominalFeatures(data, threshold)
   private final val weights: Array[Double] = this.computeWeights
 
   def getWeights: Array[Double] = this.weights
@@ -32,13 +33,21 @@ class ReliefF(override val data: Array[Array[Double]], nSamples:Int = 0, nNeighb
     val weights = Array.fill(nFeatures)(0.0)
     samples.foreach {
       idx =>
-        val neighbours = super.getKnnByClass(idx, this.nNeighbours, nClass)
+
+        val neighbours = Array.fill[NerNeiHeap](nClass)(new NerNeiHeap(this.nNeighbours))
+        for (j <- data.indices; if idx != j) {
+          val cClass = data(j)(cIndex).toInt
+          val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
+          neighbours(cClass) += (j, dist)
+        }
+
+        val neighbourIndexes = neighbours.map(_.neighbourIndexes)
         val smClass = data(idx)(cIndex).toInt
         for (j <- 0 until nClass) {
           val hit = smClass == j
           val factor = if (hit) -1.0 else priorClass(j) / (1 - priorClass(smClass))
-          for (k <- neighbours(j)) {
-            val diff = super.getDifferentFeatures(idx, k).map(math.abs)
+          for (k <- neighbourIndexes(j)) {
+            val diff = super.getDifferentFeatures(data(idx), data(k), nominalFeatures).map(math.abs)
             (0 until nFeatures).foreach(idx => weights(idx) = weights(idx) + factor * diff(idx))
           }
         }
