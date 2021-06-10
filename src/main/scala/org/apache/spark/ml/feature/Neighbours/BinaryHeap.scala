@@ -61,6 +61,11 @@ class BinaryHeap[T](capacity: Int)(implicit ord: math.Ordering[T], tag: reflect.
     data.foreach { d => this += d }
   }
 
+  def clear:Unit = {
+    this.data = new Array[T](capacity + 1)
+    this.size = 0
+  }
+
   /**
    * Performs the "bubble down" operation to place the element that is at the
    * root of the heap in its correct place so that the heap maintains the
