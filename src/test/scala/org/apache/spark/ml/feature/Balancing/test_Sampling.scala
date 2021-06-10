@@ -6,6 +6,7 @@ import scala.collection.mutable.ListBuffer
 
 class test_Sampling extends BaseTest{
 
+  case class UT() extends BalancingFactory
   test("SMOTE") {
 
     val data = new ListBuffer[Array[Double]]()
@@ -23,13 +24,11 @@ class test_Sampling extends BaseTest{
     data += Array(4, 4, 0, 0)
     data += Array(6, 3, 1, 0)
 
-   val smoted=  new BalFactory(data.toArray, 2, 100).getSmote.takeRight(5)
-
+    val smoted = new UT().getSmote(data.toArray, 2, 100, threshold = 1).takeRight(5)
     println(smoted.map(a => a.mkString("\t")).mkString("\n"))
 
     val actual = smoted.map(_.head)
-    val expected = Array(4.72360, 6.0, 5.83309, 4.65295, 5.76447)
-
+    val expected = Array(3.2763, 6.3618, 5.0, 3.6381, 6.3618)
     assert(actual === expected)
   }
 
@@ -50,7 +49,7 @@ class test_Sampling extends BaseTest{
     data += Array(4, 4, 0, 0)
     data += Array(6, 3, 1, 0)
 
-    val results = new BalFactory(data.toArray, 2, 100).getNearMiss(2)
+    val results = new UT().getNearMiss(data.toArray, 2, 100, version = 2)
 
     val pos = results.count(a => a.last == 0)
     val neg = results.count(a => a.last == 1)
