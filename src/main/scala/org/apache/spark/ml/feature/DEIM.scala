@@ -3,7 +3,7 @@ package org.apache.spark.ml.feature
 import org.apache.spark.TaskContext
 import org.apache.spark.annotation.Experimental
 import org.apache.spark.ml.Estimator
-import org.apache.spark.ml.feature.Balancing.BalFactory
+import org.apache.spark.ml.feature.Balancing.BalancingFactory
 import org.apache.spark.ml.feature.GMI.{GMIFS, LMI}
 import org.apache.spark.ml.feature.Relief.ReliefF
 import org.apache.spark.ml.feature.Utilities.Scaling
@@ -17,7 +17,7 @@ import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row}
 import org.apache.spark.storage.StorageLevel
 
 @Experimental
-final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase with Scaling {
+final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase with Scaling with BalancingFactory {
 
   def this() = this(Identifiable.randomUID("DEIM"))
 
@@ -118,8 +118,6 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
         else {
 
           val scaled = minMaxScaling(rows, maxVec, minVec, this.getFeaturesCol, this.getLabelCol).toArray
-          val balFactory = new BalFactory(scaled, this.getBalancingNumNeighbours, 100, this.getThresholdNominal, this.getSeed)
-
           val bg = if (this.getBalancingMethod != validBalancingMethod.last) 1 else this.getBaggingNum
           val weights = {
             Array.tabulate(bg) {
@@ -127,13 +125,13 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
 
                 val maxV = Array.fill[Double](numFeatures)(1.0)
                 val minV = Array.fill[Double](numFeatures)(0.0)
-                val balanced = balFactory.getBalanced(this.getBalancingMethod)
+                val balanced = super.getBalanced(this.getBalancingMethod,scaled, NeiNumber =  this.getBalancingNumNeighbours, percentage = 100, this.getThresholdNominal, seed = this.getSeed)
                 this.getRankingMethod.toUpperCase() match {
                   case "QPFS" =>
-                    val similarity = new LMI("QP", balanced, maxV , minV, this.getMaxBin).getSimilarity
+                    val similarity = new LMI("QP", balanced, maxV, minV, this.getMaxBin).getSimilarity
                     new GMIFS().apply(this.getRankingMethod)(similarity)
                   case "SRFS" | "TPFS" =>
-                    val similarity = new LMI("SR", balanced, maxV , minV, this.getMaxBin).getSimilarity
+                    val similarity = new LMI("SR", balanced, maxV, minV, this.getMaxBin).getSimilarity
                     new GMIFS().apply(this.getRankingMethod)(similarity)
                   case "RELIEFF" =>
                     new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, this.getSeed).getWeights
