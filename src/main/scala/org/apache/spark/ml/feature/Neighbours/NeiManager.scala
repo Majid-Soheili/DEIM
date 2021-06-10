@@ -11,19 +11,11 @@ import scala.util.Random
  */
 trait NeiManager extends Serializable with Logging {
 
-  def data: Array[Array[Double]]
-  def threshold:Int = 1
-  def seed:Int = 5341
-  private val r = new Random(seed)
-  private final val cIndex = data.head.length - 1
-  private final val nFeatures: Int = data.head.length - 1
-  private final val nominalFeatures = this.getNominalFeatures
-
-  final def getKnn(idx: Int, nn: Int): Array[Int] = {
+  final def getKnn(data: Array[Array[Double]], nominalFeatures: Array[Boolean], idx: Int, nn: Int): Array[Int] = {
 
     val neighbours = new NerNeiHeap(nn)
     for (j <- data.indices; if idx != j) {
-      val dist = this.distanceInstances(data(idx), data(j))
+      val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
       neighbours += (j, dist)
     }
     if (neighbours.size < nn)
@@ -32,10 +24,10 @@ trait NeiManager extends Serializable with Logging {
     neighbours.neighbourIndexes
   }
 
-  final def getKnnHit(idx: Int, nn: Int): Array[Int] = {
+  final def getKnnHit(data: Array[Array[Double]], nominalFeatures: Array[Boolean], idx: Int, nn: Int): Array[Int] = {
     val neighbours = new NerNeiHeap(nn)
     for (j <- data.indices; if idx != j && data(idx).last == data(j).last) {
-      val dist = this.distanceInstances(data(idx), data(j))
+      val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
       neighbours += (j, dist)
     }
     if (neighbours.size < nn)
@@ -44,10 +36,10 @@ trait NeiManager extends Serializable with Logging {
     neighbours.neighbourIndexes
   }
 
-  def getKnnMiss(idx: Int, nn: Int): Array[Int] = {
+  def getKnnMiss(data: Array[Array[Double]], nominalFeatures: Array[Boolean], idx: Int, nn: Int): Array[Int] = {
     val neighbours = new NerNeiHeap(nn)
     for (j <- data.indices; if idx != j && data(idx).last != data(j).last) {
-      val dist = this.distanceInstances(data(idx), data(j))
+      val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
       neighbours += (j, dist)
     }
     if (neighbours.size < nn)
@@ -56,12 +48,13 @@ trait NeiManager extends Serializable with Logging {
     neighbours.neighbourIndexes
   }
 
-  def getKnnByClass(idx: Int, neiNum: Int, clsNum: Int): Array[Array[Int]] = {
+  def getKnnByClass(data: Array[Array[Double]], nominalFeatures: Array[Boolean], idx: Int, neiNum: Int, clsNum: Int): Array[Array[Int]] = {
 
+    val cIndex = data.head.length - 1
     val neighbours = Array.fill[NerNeiHeap](clsNum)(new NerNeiHeap(neiNum))
     for (j <- data.indices; if idx != j) {
       val cClass = data(j)(cIndex).toInt
-      val dist = this.distanceInstances(data(idx), data(j))
+      val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
       neighbours(cClass) += (j, dist)
     }
 
@@ -71,46 +64,27 @@ trait NeiManager extends Serializable with Logging {
     neighbours.map(_.neighbourIndexes)
   }
 
-  def generateSynthetic(first: Int, second: Int): Array[Double] = {
-    val diff = differentFeatures(data(second), data(first))
+  def generateSynthetic(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean], seed: Int): Array[Double] = {
+
+    val nFeatures = first.length - 1
+    val diff = getDifferentFeatures(first, second, nominalFeatures)
+    val r = new Random(seed)
     val gap = r.nextDouble()
     val syntheticValues = Array.tabulate(nFeatures) {
       i =>
-        if (this.nominalFeatures(i))
-          math.round(data(first)(i) + gap * diff(i))
-        else
-          data(first)(i) + gap * diff(i)
+        if (nominalFeatures(i)) {
+          if (r.nextBoolean()) first(i) else second(i)
+          //math.round(data(first)(i) + gap * diff(i))
+        } else
+          first(i) + gap * diff(i)
     }
-    syntheticValues :+ data(first)(cIndex)
-
+    syntheticValues :+ first.last
   }
 
-  def getNearestDistanceMatrix(first: Array[Int], second: Array[Int], nerNei: Int): Array[Array[Double]] = getDistanceMatrix(first, second, nerNei, "nearest")
-
-  def getFurthestDistanceMatrix(first: Array[Int], second: Array[Int], furNei: Int): Array[Array[Double]] = getDistanceMatrix(first, second, furNei, "furthest")
-
-  def getDifferentFeatures(first:Int, second:Int): Array[Double] =  this.differentFeatures( this.data(first), this.data(second))
-
-  private def getDistanceMatrix(first: Array[Int], second: Array[Int], NeiNumber: Int, kind: String): Array[Array[Double]] = {
-
-    val nr = first.length
-    val nc = second.length
-    val neighbours =
-      if (kind == "nearest")
-        Array.fill[NerNeiHeap](nr)(new NerNeiHeap(NeiNumber))
-      else
-        Array.fill[FurNeiHeap](nr)(new FurNeiHeap(NeiNumber))
-
-    for (i <- 0 until nr; j <- 0 until nc) {
-      val dist = this.distanceInstances(data(first(i)), data(second(j)))
-      neighbours(i) += (j, dist)
-    }
-    neighbours.map(nn => nn.toArray.map(_._2))
-  }
-
-  private def getNominalFeatures: Array[Boolean] = {
+  def getNominalFeatures(data: Array[Array[Double]], threshold: Int = 1): Array[Boolean] = {
 
     val start = System.currentTimeMillis()
+    val nFeatures: Int = data.head.length - 1
     val distinctValues = Array.fill[Set[Double]](nFeatures)(Set.empty)
     for (i <- data.indices) {
       for (j <- 0 until nFeatures) {
@@ -124,17 +98,21 @@ trait NeiManager extends Serializable with Logging {
     result
   }
 
-  private def distanceInstances(first: => Array[Double], second: => Array[Double]): Double = {
+  def getDistanceInstances(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean]): Double = {
 
-    val diff = differentFeatures(first, second)
+    val diff = getDifferentFeatures(first, second, nominalFeatures)
     var squaredDistance = 0.0
-    for (i <- diff.indices) squaredDistance += math.pow(diff(i), 2)
-    math.sqrt(squaredDistance)
+    for (i <- diff.indices) squaredDistance += diff(i) * diff(i)
+    val result = math.sqrt(squaredDistance)
+    result
   }
 
-  private def differentFeatures(first: => Array[Double], second: => Array[Double]): Array[Double] = {
+  def getDifferentFeatures(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean]): Array[Double] = {
 
-    require(first.length == second.length, s"Vector dimensions do not match: Dim(v1)=${first.length} and Dim(v2)=${second.length}.")
+    require(first.length == second.length, s"Vector dimensions do not match, : Dim(v1)=${first.length} and Dim(v2)=${second.length}.")
+
+    val cIndex = first.length - 1
+    val nFeatures: Int = first.length - 1
     val diff = Array.fill[Double](nFeatures)(0.0)
     for (i <- first.indices; if i != cIndex) {
       if (nominalFeatures(i)) {
