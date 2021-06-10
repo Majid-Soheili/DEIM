@@ -10,6 +10,7 @@ import org.apache.spark.sql.Row
 trait Scaling extends Logging {
   def minMaxScaling(data: => Iterator[Row], maxVec: DenseVector, minVec: DenseVector, features: String, label: String): Iterator[Array[Double]] = {
 
+    val start = System.currentTimeMillis()
     val scale = 1.0
     val numFeatures = minVec.size
     val constantOutput = 0.5
@@ -18,7 +19,7 @@ trait Scaling extends Logging {
       // scaleArray(i) == 0 iff i-th col is constant (range == 0)
       if (range != 0) scale / range else 0.0
     }
-    data.map {
+    val result = data.map {
       row =>
         val classLabel = row.getAs[Any](label) match {
           case v: Short => v.toDouble
@@ -46,10 +47,14 @@ trait Scaling extends Logging {
         }
         values
     }
+    logInfo(s"MinMax scaling takes ${System.currentTimeMillis() - start} milliseconds")
+
+    result
   }
 
   def minMaxScaling(data: => Array[Array[Double]], maxVec: Array[Double], minVec: Array[Double]): Array[Array[Double]] = {
 
+    val start = System.currentTimeMillis()
     val scale = 1.0
     val numFeatures = minVec.length
     val constantOutput = 0.5
@@ -59,7 +64,7 @@ trait Scaling extends Logging {
       if (range != 0) scale / range else 0.0
     }
 
-    data.map {
+    val result = data.map {
       row =>
         var i = 0
         while (i < numFeatures) {
@@ -75,5 +80,8 @@ trait Scaling extends Logging {
         }
         row
     }
+
+    logInfo(s"MinMax scaling takes ${System.currentTimeMillis() - start} milliseconds")
+    result
   }
 }
