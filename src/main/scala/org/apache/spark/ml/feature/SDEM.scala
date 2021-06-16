@@ -17,6 +17,9 @@ import org.apache.spark.sql.types.StructType
 final class SDEM private [ml](override val uid: String, private val featuresWeights: Array[Array[Array[Double]]])
   extends Model[SDEM] with HasFeaturesCol with HasOutputCol with HasLabelCol{
 
+
+  logInfo(s"The number of feature weights is equal to ${featuresWeights.length} X ${featuresWeights.head.length}")
+
   //region -------- Parameters ------------------------------------------
 
   private val validFusionMethods = Array("mean", "min", "median", "geom.mean", "RRA", "stuart", "owa")
