@@ -3,6 +3,7 @@ package org.apache.spark.ml.feature.Balancing
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.feature.Neighbours.{FurNeiHeap, NeiManager, NerNeiHeap}
 
+import scala.collection.mutable
 import scala.util.Random
 
 trait BalancingFactory extends NeiManager with Logging {
@@ -20,7 +21,7 @@ trait BalancingFactory extends NeiManager with Logging {
   def getNearMiss(data: Array[Array[Double]], NeiNumber: Int = 5, percentage: Int = 500, threshold: Int = 5, version: Int = 1): Array[Array[Double]] = {
 
     val start = System.currentTimeMillis()
-    val (minIndex, othIndex) = this.getIndexes(data.map(_.last))
+    val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val ns = minIndex.length * percentage / 100
     val nf: Int = data.head.length - 1
     val nominalFeatures = this.getNominalFeatures(data, threshold)
@@ -54,7 +55,7 @@ trait BalancingFactory extends NeiManager with Logging {
     val r = new Random(seed)
     val N = percentage / 100
     val start = System.currentTimeMillis()
-    val (minIndex, othIndex) = this.getIndexes(data.map(_.last))
+    val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val neighbours = new NerNeiHeap(NeiNumber)
     val nominalFeatures = this.getNominalFeatures(data, threshold)
     val nf: Int = data.head.length - 1
@@ -86,18 +87,38 @@ trait BalancingFactory extends NeiManager with Logging {
   def getRandomUnderSampling(data: Array[Array[Double]], percentage: Int = 500, seed: Int = 12345): Array[Array[Double]] = {
 
     val r = new Random(seed)
-    val (minIndex, othIndex) = this.getIndexes(data.map(_.last))
+    val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val ns = percentage / 100 * minIndex.length
     val selected = Array.tabulate(ns)(_ => othIndex(r.nextInt(othIndex.length)))
     val indexes = (minIndex ++ selected).sorted
     indexes.map(data)
   }
 
-  private def getIndexes(labels: Array[Double]): (Array[Int], Array[Int]) = {
-    val grouped = labels.groupBy(identity)
-    val mcValue = grouped.mapValues(_.length).minBy(_._2)._1
-    val minIndex = labels.zipWithIndex.filter(_._1 == mcValue).map(_._2)
-    val othIndex = labels.zipWithIndex.filterNot(_._1 == mcValue).map(_._2)
+  def splitIndexes(labels: Array[Double]): (Array[Int], Array[Int]) = {
+
+    val counts = mutable.HashMap[Double, Int]().withDefaultValue(0)
+    labels.foreach {
+      counts(_) += 1
+    }
+    val mcValue = counts.minBy(_._2)._1
+    val minIndex = Array.fill[Int](counts(mcValue))(-1)
+    val othIndex = Array.fill[Int](labels.length - counts(mcValue))(-1)
+
+    var m = 0
+    var o = 0
+    for (i <- labels.indices) {
+      if (labels(i) == mcValue) {
+        minIndex(m) = i
+        m = m + 1
+      }
+      else {
+        othIndex(o) = i
+        o = o + 1
+      }
+    }
+
+    //val minIndex = labels.zipWithIndex.filter(_._1 == mcValue).map(_._2)
+    //val othIndex = labels.zipWithIndex.filterNot(_._1 == mcValue).map(_._2)
 
     logInfo(s"The number of instances belonging to the minority class: ${minIndex.length}")
     logInfo(s"The number of instances belonging to the other class: ${othIndex.length}")
