@@ -28,7 +28,8 @@ class test_Sampling extends BaseTest{
     println(smoted.map(a => a.mkString("\t")).mkString("\n"))
 
     val actual = smoted.map(_.head)
-    val expected = Array(3.2763, 6.3618, 5.0, 3.6381, 6.3618)
+    val expected = Array(4.7236, 5.6381, 5.0, 4.3618, 5.6381)
+
     assert(actual === expected)
   }
 
