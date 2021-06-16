@@ -67,7 +67,7 @@ trait NeiManager extends Serializable with Logging {
   def generateSynthetic(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean], seed: Int): Array[Double] = {
 
     val nFeatures = first.length - 1
-    val diff = getDifferentFeatures(first, second, nominalFeatures)
+    val diff = getDifferentFeatures(second, first, nominalFeatures)
     val r = new Random(seed)
     val gap = r.nextDouble()
     val syntheticValues = Array.tabulate(nFeatures) {
