@@ -10,7 +10,7 @@ import scala.collection.mutable
  * Local Discretion methods
  */
 trait Discretizing extends Logging {
-  def discEW(data: => Iterator[Row], maxVec: DenseVector, minVec: DenseVector, features: String, label: String, nb: Int): Iterator[Array[Byte]] = {
+  def discEW(data: Iterator[Row], maxVec: DenseVector, minVec: DenseVector, features: String, label: String, nb: Int): Iterator[Array[Byte]] = {
 
     val t1 = System.currentTimeMillis()
     val numFeatures = minVec.size
@@ -53,16 +53,19 @@ trait Discretizing extends Logging {
 
   def discEW(data: Array[Array[Double]], maxVec: Array[Double], minVec: Array[Double], nb: Int): Array[Array[Byte]] = {
 
-    val t1 = System.currentTimeMillis()
+    val start = System.currentTimeMillis()
     val numFeatures = minVec.length
     val numColumns = numFeatures + 1
     val binSize = Array.tabulate(numFeatures)(i => (maxVec(i) - minVec(i)) / nb.toDouble)
 
     def getBin(v: Double, idx: Int): Byte = {
+
+      require(v >= minVec(idx), s"the value must be greater than minVec, $v is not greater than ${minVec(idx)}.")
+
       var b = 0
       while (binSize(idx) != 0.0 && !((minVec(idx) + b * binSize(idx)) <= v && v < (minVec(idx) + (b + 1) * binSize(idx)))) b = b + 1
-      if (b == nb)
-        b = b - 1
+      if (b == nb) b = b - 1
+
       b.toByte
     }
 
@@ -73,7 +76,7 @@ trait Discretizing extends Logging {
         descRow(numColumns - 1) = vector.last.toByte
         descRow
     }
-    logInfo(s"Discretizing takes ${System.currentTimeMillis() - t1} milliseconds")
+    logInfo(s"Discretizing takes ${System.currentTimeMillis() - start} milliseconds")
     descData
   }
 }
