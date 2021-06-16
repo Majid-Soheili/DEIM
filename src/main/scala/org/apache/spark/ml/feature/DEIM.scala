@@ -97,6 +97,7 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
 
   override def fit(dataset: Dataset[_]): SDEM = {
 
+
     val encoder = Encoders.kryo[Array[Array[Double]]]
     val Row(maxVec: DenseVector, minVec: DenseVector) = dataset
       .select(Summarizer.metrics("max", "min").summary(col($(this.featuresCol))).as("summary"))
@@ -118,11 +119,11 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
         else {
 
           val scaled = minMaxScaling(rows, maxVec, minVec, this.getFeaturesCol, this.getLabelCol).toArray
-          val bg = if (this.getBalancingMethod != validBalancingMethod.last) 1 else this.getBaggingNum
+          val bg = if (validBalancingMethod.take(3).contains(this.getBalancingMethod)) 1 else this.getBaggingNum
           val weights = {
             Array.tabulate(bg) {
-              _ =>
-
+              counter =>
+                logInfo(s"Bagging number ${counter} in data partition ${TaskContext.getPartitionId()} was started")
                 val maxV = Array.fill[Double](numFeatures)(1.0)
                 val minV = Array.fill[Double](numFeatures)(0.0)
                 val balanced = super.getBalanced(this.getBalancingMethod,scaled, NeiNumber =  this.getBalancingNumNeighbours, percentage = 100, this.getThresholdNominal, seed = this.getSeed)
