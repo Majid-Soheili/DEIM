@@ -96,7 +96,7 @@ trait BaseApp extends Logging {
       134217728 128MB
     */
     val conf = spark.sparkContext.hadoopConfiguration
-    //conf.set("mapred.min.split.size", "67108864")
+    conf.set("mapred.min.split.size", "67108864")
 
     val rdd = spark.sparkContext.binaryRecords(path, s.binaryRecordLength, conf)
       .map(Row.fromSeq(_))

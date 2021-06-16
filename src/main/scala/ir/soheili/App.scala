@@ -13,7 +13,7 @@ object App extends BaseApp {
     //"SMOTE", "NearMiss2", "BaggingUnderSampling"
     localExecution = args.length == 0
     val (method, dsFile, schema, balMethod, useCatch) = if (localExecution) {
-      ("QPFS", "", DatasetSchema.UCR,"SMOTE", true)
+      ("QPFS", "", DatasetSchema.UCR,"BaggingUnderSampling", true)
     }
     else {
       val mtdName = args(0)
@@ -42,7 +42,7 @@ object App extends BaseApp {
         .setFeaturesCol("features")
         .setLabelCol("label")
         .setRankingMethod(method)
-        .setBaggingNum(10)
+        .setBaggingNum(5)
         .setBalancingMethod(balMethod)
         .setUseCatch(useCatch)
         .setNumPartitions(1)
