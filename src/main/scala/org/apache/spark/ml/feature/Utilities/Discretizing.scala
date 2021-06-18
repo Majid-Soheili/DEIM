@@ -79,4 +79,35 @@ trait Discretizing extends Logging {
     logInfo(s"Discretizing takes ${System.currentTimeMillis() - start} milliseconds")
     descData
   }
+
+  def discEWandColumnarFormat(data: Array[Array[Double]], indexes: Array[Int], maxVec: Array[Double] = Array.emptyDoubleArray, minVec: Array[Double] = Array.emptyDoubleArray, nb: Int): Array[Array[Byte]] = {
+
+    val start = System.currentTimeMillis()
+    val numFeatures = data.head.length - 1
+    val numColumns = numFeatures + 1
+    val maxVector = if (maxVec.isEmpty) Array.fill[Double](numFeatures)(1.0) else maxVec
+    val minVector = if (minVec.isEmpty) Array.fill[Double](numFeatures)(0.0) else minVec
+    val binSize = Array.tabulate(numFeatures)(i => (maxVector(i) - minVector(i)) / nb.toDouble)
+
+    def getBin(v: Double, idx: Int): Byte = {
+
+      require(v >= minVector(idx), s"the value must be greater than minVec, $v is not greater than ${minVector(idx)}.")
+
+      var b = 0
+      while (binSize(idx) != 0.0 && !((minVector(idx) + b * binSize(idx)) <= v && v < (minVector(idx) + (b + 1) * binSize(idx)))) b = b + 1
+      if (b == nb) b = b - 1
+
+      b.toByte
+    }
+
+    val numRow = indexes.length
+    val disCol = Array.fill[Byte](numColumns, numRow)(0)
+    for (i <- indexes.indices) {
+      val idx = indexes(i)
+      for (j <- 0 until numFeatures) disCol(j)(i) = getBin(data(idx)(j), j)
+      disCol(numColumns - 1)(i) = data(idx).last.toByte
+    }
+    logInfo(s"Discretizing and transform to columnar takes ${System.currentTimeMillis() - start} milliseconds")
+    disCol
+  }
 }
