@@ -48,39 +48,25 @@ object SR {
     }
   }
 
-  private def SymmetricMatrix(mat: => Array[Array[Double]]): Array[Array[Double]] = {
+  private def SymmetricMatrix(mat: Array[Array[Double]]): Array[Array[Double]] = {
     val m_t = mat.transpose
     mat.zip(m_t).map { case (a1, a2) => a1.zip(a2).map { case (v1, v2) => (v1 + v2) / 2.0 } }
   }
 
-  private def NormalizeMatrix(mat: => Array[Array[Double]]): Array[Array[Double]] = {
+  private def NormalizeMatrix(mat: Array[Array[Double]]): Array[Array[Double]] = {
 
-    val minValue = mat.map(a => a.min).min
-    val maxValue = mat.map(a => a.max).max
+    var minValue = mat.head.head
+    var maxValue = mat.head.head
+
+    for(i <- mat.indices)
+      for(j <- mat(i).indices) {
+        if (mat(i)(j) < minValue) minValue = mat(i)(j)
+        else if (mat(i)(j) > maxValue) maxValue = mat(i)(j)
+      }
+
     val diff = maxValue - minValue
-    mat.map(a => a.map(v => (v - minValue) / diff))
+    mat.foreach { row => for (i <- row.indices) row(i) = (row(i) - minValue) / diff }
+    mat
   }
 
 }
-
-/*
-def multGen[U,V, W](times: Function2[T,U,V], plus: Function2[W,V,W], plusId: W)
-  	(other: Matrix[U]) = {
-    val (rows, columns) = dim
-    val (orows, ocolumns) = other.dim
-    if (columns != orows) throw new Error("Invalid dimensions for Matrix.mult()")
-
-    val result = Matrix[W](rows,ocolumns)
-
-    for (i <- 0 until rows; j <- 0 until ocolumns){
-      var accum = plusId
-      for (k <- 0 until columns){
-        val p = times(this(i,k), other(k,j))
-        accum = plus(accum, p)
-      }
-      result(i)(j) = accum
-    }
-    result
-  }
-
- */
