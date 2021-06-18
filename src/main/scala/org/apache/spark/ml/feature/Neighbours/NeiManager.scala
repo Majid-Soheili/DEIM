@@ -66,19 +66,21 @@ trait NeiManager extends Serializable with Logging {
 
   def generateSynthetic(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean], seed: Int): Array[Double] = {
 
-    val nFeatures = first.length - 1
+    val nFeatures = nominalFeatures.length
     val diff = getDifferentFeatures(second, first, nominalFeatures)
     val r = new Random(seed)
     val gap = r.nextDouble()
-    val syntheticValues = Array.tabulate(nFeatures) {
-      i =>
+    val syntheticValues = Array.fill[Double](nFeatures + 1)(0.0)
+    for (i <- 0 until nFeatures) {
+      syntheticValues(i) =
         if (nominalFeatures(i)) {
           if (r.nextBoolean()) first(i) else second(i)
           //math.round(data(first)(i) + gap * diff(i))
         } else
           first(i) + gap * diff(i)
     }
-    syntheticValues :+ first.last
+    syntheticValues(nFeatures) = first.last
+    syntheticValues
   }
 
   def getNominalFeatures(data: Array[Array[Double]], threshold: Int = 1): Array[Boolean] = {
@@ -112,7 +114,7 @@ trait NeiManager extends Serializable with Logging {
     require(first.length == second.length, s"Vector dimensions do not match, : Dim(v1)=${first.length} and Dim(v2)=${second.length}.")
 
     val cIndex = first.length - 1
-    val nFeatures: Int = first.length - 1
+    val nFeatures: Int = nominalFeatures.length
     val diff = Array.fill[Double](nFeatures)(0.0)
     for (i <- first.indices; if i != cIndex) {
       if (nominalFeatures(i)) {
