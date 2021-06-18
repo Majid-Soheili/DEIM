@@ -9,7 +9,7 @@ class LMI(method: String, data:Array[Array[Double]], indexes:Array[Int], b:Int) 
 
   private final val numFeatures = data.head.length - 1
   private final val numColumns = numFeatures + 1
-  private final val Dsct = super.discAndColumnarEW(data, indexes, nb = b)
+  private final val Dsct = super.discEWandColumnarFormat(data, indexes, nb = b)
 
   def getSimilarity: Array[Array[Double]] = method.toUpperCase() match {
     case "QP" => MI(Dsct, b, true)
