@@ -43,6 +43,8 @@ trait BalancingFactory extends NeiManager with Logging {
 
   def getNearMissIndexes(data: Array[Array[Double]], NeiNumber: Int = 5, percentage: Int = 500, threshold: Int = 5, version: Int = 1): Array[Int] = {
 
+    logInfo(s"NearMiss Indexes: #Neighbour: $NeiNumber, percentage: $percentage")
+
     val start = System.currentTimeMillis()
     val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val ns = minIndex.length * percentage / 100
@@ -56,7 +58,7 @@ trait BalancingFactory extends NeiManager with Logging {
         val first = data(i)
         for (j <- minIndex) {
           val second = data(j)
-          val dist = super.getDistanceInstances(first, second, nominalFeatures)
+          val dist = super.getManhattanDistanceInstances(first, second, nominalFeatures)
           neighbours += (j, dist)
         }
         counter = counter + 1
