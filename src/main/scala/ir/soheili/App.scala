@@ -13,7 +13,7 @@ object App extends BaseApp {
     //"SMOTE", "NearMiss2", "BaggingUnderSampling"
     localExecution = args.length == 0
     val (method, dsFile, schema, balMethod, useCatch) = if (localExecution) {
-      ("QPFS", "", DatasetSchema.UCR,"BaggingUnderSampling", true)
+      ("ReliefF", "", DatasetSchema.FD, "BaggingUnderSampling", false)
     }
     else {
       val mtdName = args(0)
@@ -36,37 +36,77 @@ object App extends BaseApp {
 
       // super.getBalancedProcessingPartitionNumber(spark) would be set to NumPartitions
       val train = super.readData(spark, schema, dsFile, Balancing = true)
+      val numberPartitions = super.getBalancedProcessingPartitionNumber(spark, train.rdd.getNumPartitions)
       val wdTrain = super.WithoutDiscretizing(train, schema)
 
       val model = new DEIM()
         .setFeaturesCol("features")
         .setLabelCol("label")
         .setRankingMethod(method)
-        .setBaggingNum(5)
+        .setBaggingNum(10)
         .setBalancingMethod(balMethod)
         .setUseCatch(useCatch)
-        .setNumPartitions(1)
+        .setNumPartitions(numberPartitions)
         .fit(wdTrain)
 
-      val rank = model.setFirstFusionMethod("owa")
-        .setSecondFusionMethod("owa")
-        .setFirstRiskFusion(0.95)
-        .setFirstRiskFusion(0.95)
-        .getRank
+      val fusions =
+        Array(
+          ("min", 1.0, 1.0),
+          ("median", 1.0, 1.0),
+          ("geom.mean", 1.0, 1.0),
+          ("RRA", 1.0, 1.0),
+          ("stuart", 1.0, 1.0),
+          ("mean", 1.0, 1.0),
+          ("owa", 0.95, 0.95),
+          ("owa", 0.95, 0.75),
+          ("owa", 0.95, 0.50),
+          ("owa", 0.95, 0.25),
+          ("owa", 0.95, 0.05),
+          ("owa", 0.75, 0.95),
+          ("owa", 0.75, 0.75),
+          ("owa", 0.75, 0.50),
+          ("owa", 0.75, 0.25),
+          ("owa", 0.50, 0.05),
+          ("owa", 0.50, 0.95),
+          ("owa", 0.50, 0.75),
+          ("owa", 0.50, 0.50),
+          ("owa", 0.50, 0.25),
+          ("owa", 0.50, 0.05),
+          ("owa", 0.25, 0.95),
+          ("owa", 0.25, 0.75),
+          ("owa", 0.25, 0.50),
+          ("owa", 0.25, 0.25),
+          ("owa", 0.25, 0.05),
+          ("owa", 0.05, 0.95),
+          ("owa", 0.05, 0.75),
+          ("owa", 0.05, 0.50),
+          ("owa", 0.05, 0.25),
+          ("owa", 0.05, 0.05)
+        )
+      val nr = if (balMethod == "BaggingUnderSampling") 31 else 11
+      val ranks = fusions.take(nr).map {
+        case (method, risk1, risk2) =>
+          model.setFirstFusionMethod(method)
+            .setSecondFusionMethod(method)
+            .setFirstRiskFusion(risk1)
+            .setSecondRiskFusion(risk2)
+            .getRank
+      }
 
       val duration = (System.currentTimeMillis() - start) / 60000.0
       logInfo(s"Total computing time: $duration minutes.")
-      logInfo(s"Final result: ${rank.take(10).mkString(", ")}")
+      logInfo(s"Final result: ${ranks.head.take(10).mkString(", ")}")
+
 
       val SaveRankResult = true
       val SaveExecutionTime = true
 
       if (SaveRankResult) {
-        val outString = rank.mkString(",")
+        val outString = ranks.map(r => r.mkString(",")).mkString("\n")
         super.SaveOutput(spark, appName, outString.getBytes, append = false)
       }
 
-      if(SaveExecutionTime) {
+      if (SaveExecutionTime) {
         val numExecutors = spark.sparkContext.getConf.get("spark.executor.instances", "00")
         val outString = s"${DateTime.now()}, $appName, $numExecutors, $duration \n"
         super.SaveOutput(spark, fileName = "ExecutionTime", outString.getBytes, append = true)
@@ -75,6 +115,5 @@ object App extends BaseApp {
     } finally {
       spark.close()
     }
-
   }
 }
