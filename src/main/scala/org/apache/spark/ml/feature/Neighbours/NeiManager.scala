@@ -109,6 +109,13 @@ trait NeiManager extends Serializable with Logging {
     result
   }
 
+  def getManhattanDistanceInstances(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean]): Double = {
+
+    val diff = getDifferentFeatures(first, second, nominalFeatures)
+    var squaredDistance = 0.0
+    for (i <- diff.indices) squaredDistance += math.abs(diff(i))
+    squaredDistance
+  }
   def getDifferentFeatures(first: Array[Double], second: Array[Double], nominalFeatures: Array[Boolean]): Array[Double] = {
 
     require(first.length == second.length, s"Vector dimensions do not match, : Dim(v1)=${first.length} and Dim(v2)=${second.length}.")
