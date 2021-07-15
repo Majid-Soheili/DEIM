@@ -8,7 +8,7 @@ object RankFusion {
 
     val validateMethods = Array("mean", "min", "median", "geom.mean", "RRA", "stuart", "owa")
 
-    if (!validateMethods.contains(method)) throw new Exception("method should be one of: 'min', 'geom.mean', 'mean', 'median', 'stuart' or 'RRA'")
+    if (!validateMethods.contains(method)) throw new Exception("method should be one of: 'mean', 'min', 'median', 'geom.mean', 'RRA', 'stuart' or  'OWA'")
 
     val common = input.flatMap(_.toSeq).distinct
     val space = common.sortWith((x, y) => x.toString < y.toString)
