@@ -7,7 +7,7 @@ import org.apache.spark.ml.feature.Balancing.BalancingFactory
 import org.apache.spark.ml.feature.GMI.{GMIFS, LMI}
 import org.apache.spark.ml.feature.Relief.ReliefF
 import org.apache.spark.ml.feature.Utilities.Scaling
-import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vectors}
 import org.apache.spark.ml.param.{IntParam, Param, ParamMap, ParamValidators, StringArrayParam}
 import org.apache.spark.ml.stat.Summarizer
 import org.apache.spark.ml.util.Identifiable
@@ -15,6 +15,8 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row}
 import org.apache.spark.storage.StorageLevel
+
+import scala.util.Random
 
 @Experimental
 final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase with Scaling with BalancingFactory {
@@ -97,6 +99,7 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
 
   override def fit(dataset: Dataset[_]): SDEM = {
 
+    if (validBalancingMethod.take(3).contains(this.getBalancingMethod)) this.setBaggingNum(1)
 
     val encoder = Encoders.kryo[Array[Array[Double]]]
     val Row(maxVec: DenseVector, minVec: DenseVector) = dataset
@@ -104,7 +107,6 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
       .select("summary.max", "summary.min")
       .first()
 
-    val numFeatures = maxVec.size
     val balancedData: DataFrame =
       if (this.getUseCatch)
         super.BalanceLabelDistribution(dataset.select(this.getLabelCol, this.getFeaturesCol)).persist(StorageLevel.MEMORY_AND_DISK)
@@ -119,25 +121,26 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
         else {
 
           val scaled = minMaxScaling(rows, maxVec, minVec, this.getFeaturesCol, this.getLabelCol).toArray
-          val bg = if (validBalancingMethod.take(3).contains(this.getBalancingMethod)) 1 else this.getBaggingNum
-          val weights = {
-            Array.tabulate(bg) {
-              counter =>
-                logInfo(s"Bagging number ${counter} in data partition ${TaskContext.getPartitionId()} was started")
-                val maxV = Array.fill[Double](numFeatures)(1.0)
-                val minV = Array.fill[Double](numFeatures)(0.0)
-                val balanced = super.getBalanced(this.getBalancingMethod,scaled, NeiNumber =  this.getBalancingNumNeighbours, percentage = 100, this.getThresholdNominal, seed = this.getSeed)
-                this.getRankingMethod.toUpperCase() match {
-                  case "QPFS" =>
-                    val similarity = new LMI("QP", balanced, maxV, minV, this.getMaxBin).getSimilarity
-                    new GMIFS().apply(this.getRankingMethod)(similarity)
-                  case "SRFS" | "TPFS" =>
-                    val similarity = new LMI("SR", balanced, maxV, minV, this.getMaxBin).getSimilarity
-                    new GMIFS().apply(this.getRankingMethod)(similarity)
-                  case "RELIEFF" =>
-                    new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, this.getSeed).getWeights
-                }
-            }
+          val rnd = new Random(this.getSeed)
+          val weights = Array.tabulate(this.getBaggingNum) {
+            counter =>
+              logInfo(s"Bagging number ${counter} in data partition ${TaskContext.getPartitionId()} was started")
+
+              val (balanced, indexes) = super.getBalancedDataAndIndex(
+                this.getBalancingMethod, scaled,
+                this.getBalancingNumNeighbours, percentage = 100,
+                this.getThresholdNominal, rnd.nextInt()) //
+
+              this.getRankingMethod.toUpperCase() match {
+                case "QPFS" =>
+                  val similarity = new LMI("QP", balanced, indexes, this.getMaxBin).getSimilarity
+                  new GMIFS().apply(this.getRankingMethod)(similarity)
+                case "SRFS" | "TPFS" =>
+                  val similarity = new LMI("SR", balanced, indexes, this.getMaxBin).getSimilarity
+                  new GMIFS().apply(this.getRankingMethod)(similarity)
+                case "RELIEFF" =>
+                  new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, rnd.nextInt()).getWeights
+              }
           }
           Iterator(weights)
         }
