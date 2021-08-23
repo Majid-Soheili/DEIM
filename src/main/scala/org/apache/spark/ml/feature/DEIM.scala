@@ -139,7 +139,8 @@ final class DEIM (override val uid: String) extends Estimator[SDEM] with ebase w
                   val similarity = new LMI("SR", balanced, indexes, this.getMaxBin).getSimilarity
                   new GMIFS().apply(this.getRankingMethod)(similarity)
                 case "RELIEFF" =>
-                  new ReliefF(balanced, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, rnd.nextInt()).getWeights
+                  new ReliefF(balanced, indexes, this.getNumSamples, this.getNumNeighbours, this.getThresholdNominal, rnd.nextInt()).getWeights
+                // Apply indexes, the sub set of dataset would be apply as like as  QPFS
               }
           }
           Iterator(weights)
