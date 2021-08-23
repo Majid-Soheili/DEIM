@@ -48,7 +48,7 @@ trait BalancingFactory extends NeiManager with Logging {
     val start = System.currentTimeMillis()
     val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val ns = minIndex.length * percentage / 100
-    val nominalFeatures = this.getNominalFeatures(data, threshold)
+    val nominalFeatures = this.getNominalFeatures(data,data.indices.toArray, threshold)
 
     val neighbours = if (version == 1) new NerNeiHeap(NeiNumber) else new FurNeiHeap(NeiNumber)
     var counter = 0
@@ -86,7 +86,7 @@ trait BalancingFactory extends NeiManager with Logging {
     val start = System.currentTimeMillis()
     val (minIndex, othIndex) = this.splitIndexes(data.map(_.last))
     val neighbours = new NerNeiHeap(NeiNumber)
-    val nominalFeatures = this.getNominalFeatures(data, threshold)
+    val nominalFeatures = this.getNominalFeatures(data,data.indices.toArray, threshold)
     val nf: Int = data.head.length - 1
 
     val synthetic =
