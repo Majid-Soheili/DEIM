@@ -86,7 +86,7 @@ class QP (ff: Array[Array[Double]], fc: Array[Double], doCorrection:Boolean = fa
 
     val nf = fc.length
 
-    // if number of features equals 1, its wight is 1
+    // if number of features equals 1, its weight is 1
     if (nf == 1) return Array(1.0)
 
     /* Alpha is a parameter that should balance between ffMI and fcMI */
