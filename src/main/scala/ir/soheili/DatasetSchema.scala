@@ -270,4 +270,154 @@ object DatasetSchema {
 
     //override def continuousFeaturesInfo: Seq[Int] = fIndexes.diff(categoricalFeaturesInfo)
   }
+
+  case object KDDCUPDOSR21 extends DatasetSchema {
+
+    override def nColumn: Int = 129
+
+    override def fIndexes: Range = 0 to 127
+
+    override def cIndex: Integer = 128
+
+    override def name: String = "KDDCUPDOSR21"
+
+    override def fileName: String = "KDDCUPDOSR21.csv"
+
+    override def hasNegativeLabel: Boolean = false
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    override def continuousFeaturesInfo: Seq[Int] = fIndexes.diff(categoricalFeaturesInfo)
+
+  }
+
+  case object KDDCUPDOSPROBE extends DatasetSchema {
+
+    override def nColumn: Int = 129
+
+    override def fIndexes: Range = 0 to 127
+
+    override def cIndex: Integer = 128
+
+    override def name: String = "KDDCUPDOSPROBE"
+
+    override def fileName: String = "KDDCUPDOSPROBE.csv"
+
+    override def hasNegativeLabel: Boolean = false
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    override def continuousFeaturesInfo: Seq[Int] = fIndexes.diff(categoricalFeaturesInfo)
+
+  }
+
+  case object Traffic extends DatasetSchema {
+
+    override def nColumn: Int = 116
+
+    override def fIndexes: Range = 0 to 114
+
+    override def cIndex: Integer = 115
+
+    override def name: String = "Traffic"
+
+    override def fileName: String = "Traffic.csv"
+
+    override def hasNegativeLabel: Boolean = true
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    def continuousFeaturesInfo: Seq[Int] = fIndexes
+  }
+
+  case object Wiretap extends DatasetSchema {
+
+    override def nColumn: Int = 116
+
+    override def fIndexes: Range = 0 to 114
+
+    override def cIndex: Integer = 115
+
+    override def name: String = "Wiretap"
+
+    override def fileName: String = "Wiretap.csv"
+
+    override def hasNegativeLabel: Boolean = true
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    def continuousFeaturesInfo: Seq[Int] = fIndexes
+  }
+
+  case object Fuzzing extends DatasetSchema {
+
+    override def nColumn: Int = 116
+
+    override def fIndexes: Range = 0 to 114
+
+    override def cIndex: Integer = 115
+
+    override def name: String = "Fuzzing"
+
+    override def fileName: String = "Fuzzing.csv"
+
+    override def hasNegativeLabel: Boolean = true
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    def continuousFeaturesInfo: Seq[Int] = fIndexes
+  }
+
+  case object MNIST01 extends DatasetSchema {
+
+    override def nColumn: Int = 785
+
+    override def fIndexes: Range = 0 to 783
+
+    override def cIndex: Integer = 784
+
+    override def name: String = "MNIST01"
+
+    override def fileName: String = "MNIST01.csv"
+
+    override def hasNegativeLabel: Boolean = false
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    def continuousFeaturesInfo: Seq[Int] = fIndexes
+  }
+
+  case object MNIST02 extends DatasetSchema {
+
+    override def nColumn: Int = 785
+
+    override def fIndexes: Range = 0 to 783
+
+    override def cIndex: Integer = 784
+
+    override def name: String = "MNIST02"
+
+    override def fileName: String = "MNIST02.csv"
+
+    override def hasNegativeLabel: Boolean = false
+
+    override def numClasses: Int = 2
+
+    override def categoricalFeaturesInfo: Seq[Int] = Seq.empty
+
+    def continuousFeaturesInfo: Seq[Int] = fIndexes
+  }
+
 }
