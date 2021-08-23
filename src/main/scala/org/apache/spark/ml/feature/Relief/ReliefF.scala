@@ -11,17 +11,17 @@ import scala.util.Random
  * @param threshold, the threshold value to detecting nominal feature.
  * @param seed, the seed value for random number generator
  */
-class ReliefF(data: Array[Array[Double]], nSamples:Int = 0, nNeighbours:Int = 10, val threshold:Int = 1, val seed:Int = 5341) extends NeiManager{
+class ReliefF(data: Array[Array[Double]], indexes:Array[Int], nSamples:Int = 0, nNeighbours:Int = 10, val threshold:Int = 1, val seed:Int = 5341) extends NeiManager{
 
   private final val rand = new Random(seed)
   private final val cIndex = data.head.length - 1
-  private final val nInstances: Double = data.length
-  private final val numSamples = if (nSamples <= 0) nInstances.toInt else nSamples
+  private final val nInstances: Double = indexes.length
+  private final val numSamples = if (nSamples <= 0 || nSamples > nInstances) nInstances.toInt else nSamples
   private final val nFeatures: Int = data.head.length - 1
   private final val priorClass = this.getPriorProbabilityClass
   private final val nClass = priorClass.length
   private final val samples = this.getSamples
-  private final val nominalFeatures = super.getNominalFeatures(data, threshold)
+  private final val nominalFeatures = super.getNominalFeatures(data, indexes, threshold)
   private final val weights: Array[Double] = this.computeWeights
 
   def getWeights: Array[Double] = this.weights
@@ -35,7 +35,7 @@ class ReliefF(data: Array[Array[Double]], nSamples:Int = 0, nNeighbours:Int = 10
       idx =>
 
         val neighbours = Array.fill[NerNeiHeap](nClass)(new NerNeiHeap(this.nNeighbours))
-        for (j <- data.indices; if idx != j) {
+        for (j <- indexes; if idx != j) {
           val cClass = data(j)(cIndex).toInt
           val dist = this.getDistanceInstances(data(idx), data(j), nominalFeatures)
           neighbours(cClass) += (j, dist)
@@ -57,13 +57,12 @@ class ReliefF(data: Array[Array[Double]], nSamples:Int = 0, nNeighbours:Int = 10
   }
 
   private def getSamples: Array[Int] = {
-    val randomIndexes = rand.shuffle[Int, IndexedSeq](0 until this.nInstances.toInt)
-    randomIndexes.take(this.numSamples).toArray.sorted
+    rand.shuffle(indexes.toIndexedSeq).take(this.numSamples).toArray.sorted
   }
 
   private def getPriorProbabilityClass: Array[Double] = {
     val prior = Array.fill[Double](255)(0.0)
-    for (i <- data.indices) {
+    for (i <- indexes) {
       val idx = data(i)(cIndex).toInt
       prior(idx) += 1.0
     }
