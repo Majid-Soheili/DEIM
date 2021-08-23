@@ -8,10 +8,22 @@ this matter, DEIM utilizes a novel and approximated method to make representativ
 Next, DEIM applies a feature ranking method on a bag of random under-sampling datasets in each data partition. Finally, the intermediate feature rankings are fused in a stacking approach in two separated levels.
 
 The DEIM
-    * feature ranking method: QPFS, ReliefF
-    * balancing method: "SMOTE", "NearMiss2", "BaggingUnderSampling"
-    * rank fusion meethod: "mean", "min", "median", "geom.mean", "RRA", "stuart", "owa"
-    * risk factors: a double value between 0, and 1 
+* feature ranking method: 
+  * QPFS
+  * ReliefF
+* balancing method:
+  * SMOTE
+  * NearMiss2
+  * BaggingUnderSampling
+* rank fusion method:
+  * mean
+  * min
+  * median
+  * geom.mean
+  * RRA
+  * stuart
+  * owa
+* risk factors: a double value between 0, and 1 
 ## Example (ml):
     import org.apache.spark.ml.feature._
     val rkMethod = "QPFS"
