@@ -18,7 +18,9 @@ class GMIFS {
 
     val nColumns = similarity.length
     val nze = similarity.zipWithIndex.filterNot(_._1.sum.isNaN).map(_._2)
-    val nzeSU = similarity.filterNot(_.sum.isNaN).map(a => a.filterNot(_ == 0))
+    val nzeSU = Array.fill[Double](nze.length, nze.length)(0.0)
+    for(i <- nze.indices; j <- nze.indices)
+        nzeSU(i)(j) = similarity(nze(i))(nze(j))
     val ffSU = nzeSU.dropRight(1).map(row => row.dropRight(1))
     val fcSU = nzeSU.last.dropRight(1)
 
