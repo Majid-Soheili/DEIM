@@ -1,6 +1,6 @@
 package org.apache.spark.ml.feature.Neighbours
 
-class BinaryHeap[T](capacity: Int)(implicit ord: math.Ordering[T], tag: reflect.ClassTag[T])
+  class BinaryHeap[T](capacity: Int)(implicit ord: math.Ordering[T], tag: reflect.ClassTag[T])
   extends java.io.Serializable {
 
   // TODO Init array
