@@ -83,12 +83,14 @@ trait NeiManager extends Serializable with Logging {
     syntheticValues
   }
 
-  def getNominalFeatures(data: Array[Array[Double]], threshold: Int = 1): Array[Boolean] = {
+
+
+  def getNominalFeatures(data: Array[Array[Double]], indexes:Array[Int], threshold: Int = 1): Array[Boolean] = {
 
     val start = System.currentTimeMillis()
     val nFeatures: Int = data.head.length - 1
     val distinctValues = Array.fill[Set[Double]](nFeatures)(Set.empty)
-    for (i <- data.indices) {
+    for (i <- indexes) {
       for (j <- 0 until nFeatures) {
         if (distinctValues(j).size < threshold)
           distinctValues(j) += data(i)(j)
