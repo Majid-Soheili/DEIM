@@ -13,7 +13,7 @@ object App extends BaseApp {
     //"SMOTE", "NearMiss2", "BaggingUnderSampling"
     localExecution = args.length == 0
     val (method, dsFile, schema, balMethod, useCatch) = if (localExecution) {
-      ("ReliefF", "", DatasetSchema.FD, "BaggingUnderSampling", false)
+      ("QPFS", "", DatasetSchema.Wiretap, "BaggingUnderSampling", false)
     }
     else {
       val mtdName = args(0)
