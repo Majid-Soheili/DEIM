@@ -13,10 +13,11 @@ class test_ReliefF extends BaseSparkTest with Scaling {
     val scaled = super.minMaxScaling(data, maxVec, minVec)
     val nInstances = scaled.length
 
-    val rel = new ReliefF(data, nInstances, 10,1)
+    val rel = new ReliefF(data, data.indices.toArray, nInstances, 10, 1)
     val actualRank = rel.getRanks.take(10)
     val expectedRank = Array(35, 162, 83, 96, 32, 159, 135, 58, 36, 95)
     assert(actualRank === expectedRank)
+
   }
 
   test("ReliefF-Musk-threshold-10") {
@@ -27,7 +28,7 @@ class test_ReliefF extends BaseSparkTest with Scaling {
     val scaled = super.minMaxScaling(data, maxVec, minVec)
     val nInstances = scaled.length
 
-    val rel = new ReliefF(data, nInstances, 10,10)
+    val rel = new ReliefF(data, data.indices.toArray, nInstances, 10, 10)
     val actualRank = rel.getRanks.take(10)
     val expectedRank = Array(94, 83, 145, 36, 3, 96, 87, 120, 89, 158)
     assert(actualRank === expectedRank)
